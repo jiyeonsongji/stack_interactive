@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+  body { background: #f8f9fa; padding: 20px; color: #1a1a2e; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; color: #1a1a2e; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab { padding: 8px 18px; border-radius: 20px; border: 2px solid #e0e0e0; background: white; cursor: pointer; font-size: 13px; font-weight: 600; color: #555; transition: all 0.2s; }
+  .tab.active { background: #c0392b; border-color: #c0392b; color: white; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #7b241c; }
+  .wrap { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 16px; }
+
+  /* ── PUSH/POP ── */
+  .stack-area { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+
+  .stack-visual-col { display: flex; flex-direction: column; align-items: center; }
+  .stack-label-top { font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 600; }
+  .push-arrow { font-size: 13px; color: #c0392b; font-weight: 700; margin-bottom: 4px; }
+
+  .stack-box {
+    width: 110px;
+    border: 2px solid #ddd;
+    border-radius: 0 0 8px 8px;
+    border-top: none;
+    background: #fafafa;
+    overflow: hidden;
+  }
+  .s-cell {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    border-top: 1px solid #eee;
+    position: relative;
+    transition: background 0.2s;
+    color: #1a1a2e;
+  }
+  .s-cell.filled { background: #fde8e8; color: #7b241c; border-top-color: #e8b4b8; }
+  .s-cell.top-cell { border-left: 3px solid #c0392b; }
+  .s-idx { position: absolute; left: 5px; font-size: 9px; color: #bbb; }
+  .top-tag { position: absolute; right: -42px; font-size: 10px; font-weight: 700; color: #c0392b; white-space: nowrap; }
+
+  .pop-arrow { font-size: 13px; color: #888; margin-top: 4px; }
+
+  /* State info */
+  .state-col { flex: 1; min-width: 160px; }
+  .info-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #888; }
+  .info-val { font-weight: 700; color: #7b241c; }
+  .info-val.green { color: #1e8449; }
+  .info-val.red { color: #c0392b; }
+
+  /* Controls */
+  .controls { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+  .val-input {
+    padding: 7px 12px; border: 2px solid #e0e0e0; border-radius: 8px;
+    font-size: 13px; width: 100px; outline: none; transition: border-color 0.2s;
+  }
+  .val-input:focus { border-color: #c0392b; }
+  .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+  .btn-push { background: #c0392b; color: white; }
+  .btn-push:hover { background: #a93226; }
+  .btn-pop  { background: #2980b9; color: white; }
+  .btn-pop:hover  { background: #1a6ca8; }
+  .btn-reset { background: #95a5a6; color: white; }
+  .btn-reset:hover { background: #7f8c8d; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .log { font-size: 12px; color: #555; margin-top: 10px; padding: 8px 12px; background: #f9f9f9; border-radius: 6px; border-left: 3px solid #c0392b; min-height: 32px; line-height: 1.5; }
+  .status-bar { background: #f0f0f0; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 10px; color: #444; }
+  .status-bar span { font-weight: 700; color: #7b241c; }
+
+  /* algo box */
+  .algo-box { background: #fef9f9; border: 1.5px solid #f5b7b1; border-radius: 8px; padding: 12px 14px; margin-top: 12px; font-size: 12px; font-family: monospace; color: #444; line-height: 1.8; }
+  .algo-box .highlight { color: #c0392b; font-weight: 700; }
+
+  /* ── EXPRESSION ── */
+  .expr-input-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .expr-input {
+    flex: 1; padding: 9px 12px; border: 2px solid #e0e0e0; border-radius: 8px;
+    font-size: 14px; font-family: monospace; outline: none; transition: border-color 0.2s;
+  }
+  .expr-input:focus { border-color: #c0392b; }
+  .btn-convert { background: #27ae60; color: white; }
+  .btn-convert:hover { background: #1e8449; }
+
+  .notation-cards { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .nc { flex: 1; min-width: 110px; border: 2px solid #eee; border-radius: 10px; padding: 12px; text-align: center; background: white; }
+  .nc h4 { font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .nc .res { font-size: 16px; font-weight: 700; font-family: monospace; color: #1a1a2e; min-height: 24px; }
+  .nc.active-nc { border-color: #c0392b; }
+  .nc.active-nc .res { color: #c0392b; }
+
+  .steps-wrap { max-height: 200px; overflow-y: auto; }
+  table { width: 100%; font-size: 12px; border-collapse: collapse; }
+  td, th { padding: 5px 8px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+  th { font-weight: 700; color: #666; background: #f8f9fa; }
+  td:first-child { font-weight: 700; color: #c0392b; font-family: monospace; text-align: center; }
+  td.stack-col { color: #2980b9; font-family: monospace; }
+  td.out-col { color: #27ae60; font-family: monospace; font-weight: 700; }
+
+  /* ── QUIZ ── */
+  .quiz-q { font-size: 14px; font-weight: 600; margin-bottom: 14px; line-height: 1.6; color: #1a1a2e; }
+  .quiz-opts { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-opt {
+    padding: 10px 14px; border-radius: 8px; border: 2px solid #e0e0e0;
+    background: white; color: #444; font-size: 13px; cursor: pointer;
+    text-align: left; transition: all 0.15s; font-family: 'Segoe UI', sans-serif;
+  }
+  .quiz-opt:hover { border-color: #c0392b; color: #7b241c; }
+  .quiz-opt.correct { border-color: #27ae60; background: #eafaf1; color: #1e8449; }
+  .quiz-opt.wrong   { border-color: #e74c3c; background: #fdecea; color: #c0392b; }
+  .quiz-opt.disabled { pointer-events: none; opacity: 0.5; }
+  .quiz-explain { margin-top: 10px; font-size: 13px; color: #666; line-height: 1.6; padding: 10px 12px; background: #f9f9f9; border-radius: 8px; border-left: 3px solid #27ae60; display: none; }
+  .quiz-explain.show { display: block; }
+  .quiz-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+  .quiz-prog { font-size: 13px; color: #888; }
+  .btn-next { background: #c0392b; color: white; display: none; }
+  .btn-next.show { display: block; }
+  .score-badge { text-align: center; padding: 20px; font-size: 18px; font-weight: 700; display: none; }
+</style>
+</head>
+<body>
+
+<h1>🗂 스택(Stack) 인터랙티브</h1>
+<p class="subtitle">탭을 눌러 스택을 직접 체험해보세요 · LIFO (후입선출)</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('pushpop', this)">① Push / Pop</div>
+  <div class="tab" onclick="showTab('expr', this)">② 수식 표기법</div>
+  <div class="tab" onclick="showTab('quiz', this)">③ 퀴즈</div>
+</div>
+
+<!-- ===== PUSH/POP ===== -->
+<div id="panel-pushpop" class="panel active">
+  <div class="wrap">
+    <div class="section-title">스택 (Stack) — LIFO (후입선출)</div>
+    <div class="stack-area">
+
+      <div class="stack-visual-col">
+        <div class="push-arrow">↓ push</div>
+        <div class="stack-box" id="stack-box"></div>
+        <div class="pop-arrow">↑ pop</div>
+      </div>
+
+      <div class="state-col">
+        <div class="info-row"><span class="info-label">top</span><span class="info-val" id="s-top">-1</span></div>
+        <div class="info-row"><span class="info-label">size</span><span class="info-val" id="s-size">0 / 5</span></div>
+        <div class="info-row"><span class="info-label">상태</span><span class="info-val green" id="s-state">공백(empty)</span></div>
+
+        <div class="controls">
+          <input class="val-input" id="push-val" placeholder="값 입력" maxlength="5" />
+          <button class="btn btn-push" id="btn-push" onclick="doPush()">PUSH ↓</button>
+          <button class="btn btn-pop"  id="btn-pop"  onclick="doPop()">POP ↑</button>
+          <button class="btn btn-reset" onclick="doReset()">초기화</button>
+        </div>
+
+        <div class="algo-box" id="algo-box">
+          <span class="highlight">push(S, x)</span><br>
+          &nbsp; top ← top + 1<br>
+          &nbsp; if top ≥ SIZE → <span class="highlight">overflow</span><br>
+          &nbsp; else S(top) ← x
+        </div>
+      </div>
+    </div>
+
+    <div class="log" id="push-log">버튼을 눌러 스택을 조작해보세요.</div>
+    <div class="status-bar" id="status-bar">top = <span>-1</span> &nbsp;|&nbsp; 상태: <span>공백(empty)</span></div>
+  </div>
+</div>
+
+<!-- ===== EXPRESSION ===== -->
+<div id="panel-expr" class="panel">
+  <div class="wrap">
+    <div class="section-title">수식 표기법 변환 — 스택 활용</div>
+    <div class="expr-input-row">
+      <input class="expr-input" id="expr-in" placeholder="중위식 입력 예: (A+B)*C, A+B*C" value="(A+B)*C" />
+      <button class="btn btn-convert" onclick="convertExpr()">변환 →</button>
+    </div>
+    <div class="notation-cards">
+      <div class="nc"><h4>중위 (Infix)</h4><div class="res" id="nc-infix">—</div></div>
+      <div class="nc active-nc"><h4>후위 (Postfix)</h4><div class="res" id="nc-postfix">—</div></div>
+      <div class="nc"><h4>전위 (Prefix)</h4><div class="res" id="nc-prefix">—</div></div>
+    </div>
+    <div class="section-title" style="font-size:13px; margin-bottom:8px;">후위 변환 단계 (스택 사용)</div>
+    <div class="steps-wrap">
+      <table>
+        <tr><th>문자</th><th>동작</th><th>스택</th><th>출력</th></tr>
+        <tbody id="steps-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="section-title" style="font-size:13px;">변환 규칙 요약</div>
+    <table>
+      <tr><th>읽은 문자</th><th>동작</th></tr>
+      <tr><td>( 왼쪽 괄호</td><td>무시 (스킵)</td></tr>
+      <tr><td>피연산자 (A, B…)</td><td>바로 출력</td></tr>
+      <tr><td>연산자 (+, *, …)</td><td>스택에 push</td></tr>
+      <tr><td>) 오른쪽 괄호</td><td>스택 pop → 출력</td></tr>
+      <tr><td>수식 끝</td><td>스택 비울 때까지 pop → 출력</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ===== QUIZ ===== -->
+<div id="panel-quiz" class="panel">
+  <div class="wrap" id="quiz-wrap">
+    <div class="section-title">스택 퀴즈 — 기출문제 유형</div>
+    <div class="quiz-q" id="quiz-q"></div>
+    <div class="quiz-opts" id="quiz-opts"></div>
+    <div class="quiz-explain" id="quiz-explain"></div>
+    <div class="quiz-nav">
+      <span class="quiz-prog" id="quiz-prog"></span>
+      <button class="btn btn-next" id="btn-next" onclick="nextQuiz()">다음 →</button>
+    </div>
+  </div>
+  <div class="score-badge" id="score-badge"></div>
+</div>
+
+<script>
+// ── TABS ──
+function showTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── STACK ──
+const MAX = 5;
+let stack = [];
+const COLORS = ['#fde8e8','#fdd5c5','#f0e8fd','#d5e8fd','#d5fde8'];
+const BORDER_COLORS = ['#e8b4b8','#f0a98a','#c8a8e8','#a8c8e8','#a8e8c0'];
+
+function renderStack() {
+  const box = document.getElementById('stack-box');
+  box.innerHTML = '';
+  for (let i = MAX - 1; i >= 0; i--) {
+    const cell = document.createElement('div');
+    cell.className = 's-cell';
+    const idx = document.createElement('span');
+    idx.className = 's-idx';
+    idx.textContent = '[' + i + ']';
+    cell.appendChild(idx);
+    if (i < stack.length) {
+      cell.classList.add('filled');
+      cell.style.background = COLORS[i % COLORS.length];
+      cell.style.borderTopColor = BORDER_COLORS[i % BORDER_COLORS.length];
+      const txt = document.createTextNode(stack[i]);
+      cell.appendChild(txt);
+      if (i === stack.length - 1) {
+        cell.classList.add('top-cell');
+        const tag = document.createElement('span');
+        tag.className = 'top-tag';
+        tag.textContent = '← top';
+        cell.appendChild(tag);
+      }
+    }
+    box.appendChild(cell);
+  }
+
+  const top = stack.length - 1;
+  document.getElementById('s-top').textContent = top;
+  document.getElementById('s-size').textContent = stack.length + ' / ' + MAX;
+  const stEl = document.getElementById('s-state');
+  if (stack.length === 0)    { stEl.textContent = '공백(empty)'; stEl.className = 'info-val green'; }
+  else if (stack.length === MAX) { stEl.textContent = '포화(full)'; stEl.className = 'info-val red'; }
+  else                           { stEl.textContent = '정상'; stEl.className = 'info-val'; }
+
+  document.getElementById('btn-pop').disabled = stack.length === 0;
+  document.getElementById('btn-push').disabled = stack.length >= MAX;
+  document.getElementById('status-bar').innerHTML =
+    'top = <span>' + top + '</span> &nbsp;|&nbsp; 상태: <span>' + stEl.textContent + '</span>';
+}
+
+function setLog(msg) { document.getElementById('push-log').textContent = msg; }
+
+function updateAlgo(mode) {
+  const box = document.getElementById('algo-box');
+  if (mode === 'push') {
+    box.innerHTML = '<span class="highlight">push(S, x)</span><br>&nbsp; top ← top + 1<br>&nbsp; if top ≥ SIZE → <span class="highlight">overflow</span><br>&nbsp; else S(top) ← x';
+  } else {
+    box.innerHTML = '<span class="highlight">pop(S)</span><br>&nbsp; if isEmpty(S) → <span class="highlight">underflow</span><br>&nbsp; else {<br>&nbsp;&nbsp;&nbsp; x ← S(top)<br>&nbsp;&nbsp;&nbsp; top ← top - 1 }';
+  }
+}
+
+function doPush() {
+  const v = document.getElementById('push-val').value.trim();
+  if (!v) return;
+  updateAlgo('push');
+  if (stack.length >= MAX) { setLog('⚠️ OVERFLOW — 스택이 가득 찼습니다! (top = ' + (MAX-1) + ')'); return; }
+  stack.push(v);
+  document.getElementById('push-val').value = '';
+  setLog('push("' + v + '") → S[' + (stack.length-1) + '] = "' + v + '",  top = ' + (stack.length-1));
+  renderStack();
+}
+
+function doPop() {
+  updateAlgo('pop');
+  if (stack.length === 0) { setLog('⚠️ UNDERFLOW — 스택이 비어 있습니다! (top = -1)'); return; }
+  const v = stack.pop();
+  setLog('pop() → "' + v + '" 반환,  top = ' + (stack.length - 1));
+  renderStack();
+}
+
+function doReset() {
+  stack = [];
+  document.getElementById('push-val').value = '';
+  updateAlgo('push');
+  setLog('스택 초기화 완료. (top = -1)');
+  renderStack();
+}
+
+renderStack();
+
+// ── EXPRESSION ──
+function prec(op) { return (op==='*'||op==='/')? 2 : (op==='+'||op==='-')? 1 : 0; }
+
+function toPostfix(expr) {
+  const toks = expr.replace(/\s/g,'').split('');
+  let out = [], stk = [], steps = [];
+  for (let ch of toks) {
+    if (ch === '(') {
+      stk.push(ch);
+      steps.push({ch, action:'push (', stk:[...stk], out:[...out]});
+    } else if (ch === ')') {
+      while (stk.length && stk[stk.length-1] !== '(') {
+        const op = stk.pop(); out.push(op);
+        steps.push({ch:')', action:'pop → 출력: '+op, stk:[...stk], out:[...out]});
+      }
+      stk.pop();
+      steps.push({ch:')', action:'( 제거', stk:[...stk], out:[...out]});
+    } else if ('+-*/'.includes(ch)) {
+      while (stk.length && stk[stk.length-1]!=='(' && prec(stk[stk.length-1])>=prec(ch)) {
+        const op = stk.pop(); out.push(op);
+        steps.push({ch, action:'우선순위 → pop 출력: '+op, stk:[...stk], out:[...out]});
+      }
+      stk.push(ch);
+      steps.push({ch, action:'push '+ch, stk:[...stk], out:[...out]});
+    } else {
+      out.push(ch);
+      steps.push({ch, action:'피연산자 → 출력', stk:[...stk], out:[...out]});
+    }
+  }
+  while (stk.length) {
+    const op = stk.pop(); out.push(op);
+    steps.push({ch:'끝', action:'스택 비우기 → '+op, stk:[...stk], out:[...out]});
+  }
+  return { postfix: out.join(''), steps };
+}
+
+function toPrefix(expr) {
+  const rev = expr.replace(/\s/g,'').split('').reverse().map(c=>c==='('?')':c===')'?'(':c).join('');
+  return toPostfix(rev).postfix.split('').reverse().join('');
+}
+
+function convertExpr() {
+  const raw = document.getElementById('expr-in').value.trim();
+  if (!raw) return;
+  try {
+    const { postfix, steps } = toPostfix(raw);
+    const prefix = toPrefix(raw);
+    document.getElementById('nc-infix').textContent = raw;
+    document.getElementById('nc-postfix').textContent = postfix;
+    document.getElementById('nc-prefix').textContent = prefix;
+    const tbody = document.getElementById('steps-tbody');
+    tbody.innerHTML = '';
+    steps.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${s.ch}</td><td>${s.action}</td><td class="stack-col">[${s.stk.join('')}]</td><td class="out-col">${s.out.join('')}</td>`;
+      tbody.appendChild(tr);
+    });
+  } catch(e) {
+    document.getElementById('nc-postfix').textContent = '오류';
+  }
+}
+convertExpr();
+
+// ── QUIZ ──
+const QS = [
+  { q:'A, B, C, D 순서로 push 후 출력한 결과로 ❌ 불가능한 것은?',
+    opts:['D, C, B, A','B, C, D, A','C, B, A, D','D, B, C, A'], ans:3,
+    ex:'D를 먼저 꺼내려면 A,B,C,D 모두 push해야 합니다. 이후엔 D→C→B→A 순으로만 꺼낼 수 있으므로 "D, B, C, A"는 불가능합니다.' },
+  { q:'공백 스택에서 pop 시 발생하는 오류는?',
+    opts:['Overflow','Underflow','Deadlock','NullPointer'], ans:1,
+    ex:'스택이 비어있을 때 pop → Underflow. 가득 찼을 때 push → Overflow.' },
+  { q:'중위식 A+B*C 를 후위식으로 바꾸면?',
+    opts:['AB+C*','ABC*+','A+BC*','ABC+*'], ans:1,
+    ex:'* 가 + 보다 우선순위 높음 → A+(B*C) → ABC*+' },
+  { q:'postfix "3 4 * 5 6 * +" 의 결과는?',
+    opts:['35','42','81','360'], ans:1,
+    ex:'3×4=12, 5×6=30, 12+30=42' },
+  { q:'스택 응용 분야로 거리가 먼 것은?',
+    opts:['인터럽트 처리','수식 계산','운영체제 작업 스케줄링','서브루틴 복귀번지 저장'], ans:2,
+    ex:'작업 스케줄링은 큐(Queue) 영역. 스택은 인터럽트, 수식, 함수 복귀에 사용.' },
+  { q:'스택에서 top의 초기값(공백 상태)은?',
+    opts:['0','1','-1','null'], ans:2,
+    ex:'공백 스택의 top = -1. 첫 push 후 top이 0이 됩니다.' }
+];
+let qi = 0, score = 0, answered = false;
+
+function loadQ() {
+  if (qi >= QS.length) {
+    document.getElementById('quiz-wrap').style.display = 'none';
+    const badge = document.getElementById('score-badge');
+    badge.style.display = 'block';
+    badge.style.color = score >= 4 ? '#1e8449' : '#c0392b';
+    badge.textContent = '🎉 완료!  점수: ' + score + ' / ' + QS.length;
+    return;
+  }
+  answered = false;
+  const q = QS[qi];
+  document.getElementById('quiz-q').textContent = (qi+1) + '. ' + q.q;
+  document.getElementById('quiz-prog').textContent = (qi+1) + ' / ' + QS.length;
+  const opts = document.getElementById('quiz-opts');
+  opts.innerHTML = '';
+  q.opts.forEach((o,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-opt';
+    btn.textContent = ['①','②','③','④'][i] + ' ' + o;
+    btn.onclick = () => selectQ(i);
+    opts.appendChild(btn);
+  });
+  document.getElementById('quiz-explain').className = 'quiz-explain';
+  document.getElementById('btn-next').className = 'btn btn-next';
+}
+
+function selectQ(i) {
+  if (answered) return;
+  answered = true;
+  const q = QS[qi];
+  document.querySelectorAll('.quiz-opt').forEach((o,idx) => {
+    o.classList.add('disabled');
+    if (idx === q.ans) o.classList.add('correct');
+    else if (idx === i) o.classList.add('wrong');
+  });
+  if (i === q.ans) score++;
+  const ex = document.getElementById('quiz-explain');
+  ex.textContent = '💡 ' + q.ex;
+  ex.className = 'quiz-explain show';
+  document.getElementById('btn-next').className = 'btn btn-next show';
+}
+
+function nextQuiz() { qi++; loadQ(); }
+loadQ();
+</script>
+</body>
+</html>
